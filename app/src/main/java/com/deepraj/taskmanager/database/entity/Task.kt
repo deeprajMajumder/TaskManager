@@ -10,7 +10,7 @@ data class Task(
     @SerializedName("id")
     val id: Int = 0,
     @SerializedName("title")
-    val title: String,
+    var title: String,
     @SerializedName("completed")
-    val completed: Boolean
+    var completed: Boolean
 )
