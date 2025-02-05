@@ -69,7 +69,6 @@ class TaskActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TaskManagerTheme {
-                val taskList by viewModel.tasks.collectAsState()
                 val showDialog = remember { mutableStateOf(false) }
                 val selectedTask = remember { mutableStateOf<Task?>(null) }
                 Scaffold(
@@ -90,7 +89,6 @@ class TaskActivity : ComponentActivity() {
                     TaskListScreen(
                         viewModel = viewModel,
                         innerPadding = innerPadding,
-                        taskList = taskList,
                         showDialog = showDialog,
                         selectedTask = selectedTask
                     )
@@ -105,15 +103,16 @@ class TaskActivity : ComponentActivity() {
 fun TaskListScreen(
     viewModel: TaskViewModel,
     innerPadding: PaddingValues,
-    taskList: List<Task>,
     showDialog: MutableState<Boolean>,
     selectedTask: MutableState<Task?>
 ) {
+    val taskList by viewModel.tasks.collectAsState()
+
     val lazyListState = rememberLazyListState()
 
     val onAddOrUpdateTask: (Task) -> Unit = { task ->
         if (taskList.any { it.id == task.id }) {
-            viewModel.toggleTaskCompletion(task)
+            viewModel.updateTask(task)
         } else {
             viewModel.addTask(task.title)
         }
@@ -122,7 +121,6 @@ fun TaskListScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
-
     ) {
         LazyColumn(
             state = lazyListState,
@@ -160,7 +158,6 @@ fun TaskListScreen(
             )
         }
     }
-
 }
 
 

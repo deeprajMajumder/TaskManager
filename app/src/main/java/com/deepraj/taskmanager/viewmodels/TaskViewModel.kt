@@ -75,15 +75,14 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun toggleTaskCompletion(task: Task) {
+    fun updateTask(task: Task) {
         viewModelScope.launch {
-            val updatedTask = task.copy(completed = !task.completed)
-            taskDatabase.taskDao().updateTask(updatedTask)
-            _tasks.value = _tasks.value.map { if (it.id == task.id) updatedTask else it }
+            taskDatabase.taskDao().updateTask(task)
+            _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
             val params = Bundle().apply {
                 putInt(Constants.TASK_ID, task.id)
                 putString(Constants.TASK_TITLE, task.title)
-                putBoolean(Constants.TASK_COMPLETED, updatedTask.completed)
+                putBoolean(Constants.TASK_COMPLETED, task.completed)
             }
             firebaseAnalytics.logEvent(Constants.TASK_COMPLETION, params)
         }
