@@ -1,7 +1,9 @@
 package com.deepraj.taskmanager.viewmodels
 
 import android.os.Bundle
-import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.deepraj.taskmanager.database.TaskDatabase
@@ -29,29 +31,32 @@ class TaskViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<TaskUiState>(TaskUiState.Empty)
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
 
+    var selectedTab by mutableStateOf<String?>("All")
+        private set
+
     private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+
+    private val _filteredTasks = MutableStateFlow<List<Task>>(emptyList())
 
     // Sorting preferences
     private val _isReversed = MutableStateFlow(false)
     val isReversed: StateFlow<Boolean> = _isReversed.asStateFlow()
 
     private val _showCompletedFirst = MutableStateFlow<Boolean?>(null)
-    val showCompletedFirst: StateFlow<Boolean?> = _showCompletedFirst.asStateFlow()
 
     // Task counts
+    val allCount = _tasks.map { it.count() }
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
     val completedCount = _tasks.map { it.count { task -> task.completed } }
         .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    val toBeCompletedCount = _tasks.map { it.count { task -> !task.completed } }
+    val incompleteCount = _tasks.map { it.count { task -> !task.completed } }
         .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    val sortedTasks = combine(_tasks, _isReversed, _showCompletedFirst) { tasks, isReversed, showCompletedFirst ->
-        val sorted = when (showCompletedFirst) {
-            true -> tasks.sortedByDescending { it.completed }
-            false -> tasks.sortedBy { it.completed }
-            null -> tasks
-        }
-        if (isReversed) sorted.reversed() else sorted
+    // Sorted filtered tasks
+    val sortedTasks = combine(_filteredTasks, _isReversed) { tasks, isReversed ->
+        if (isReversed) tasks.reversed() else tasks
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val firebaseAnalytics = Firebase.analytics
@@ -64,6 +69,7 @@ class TaskViewModel @Inject constructor(
                 apiTasks?.let { tasks ->
                     taskDatabase.taskDao().insertTasks(tasks)
                     _tasks.value = taskDatabase.taskDao().getAllTasks()
+                    _filteredTasks.value = _tasks.value // Initially no filtering, show all tasks
                 }
                 _uiState.value = TaskUiState.Loaded("Tasks Loaded")
                 logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
@@ -80,6 +86,7 @@ class TaskViewModel @Inject constructor(
             val newTask = Task(title = title, completed = false)
             taskDatabase.taskDao().insertTask(newTask)
             _tasks.value += newTask
+            filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task added")
             logAnalyticsEvent(Constants.TASK_ADDED, newTask.id, newTask.title, newTask.completed)
         }
@@ -89,6 +96,7 @@ class TaskViewModel @Inject constructor(
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
             _tasks.value = _tasks.value.filter { it.id != task.id }
+            filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task removed")
             logAnalyticsEvent(Constants.TASK_REMOVAL, task.id, task.title, task.completed)
         }
@@ -99,6 +107,7 @@ class TaskViewModel @Inject constructor(
         viewModelScope.launch {
             taskDatabase.taskDao().updateTask(task)
             _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
+            filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task updated")
             logAnalyticsEvent(Constants.TASK_COMPLETION, task.id, task.title, task.completed)
         }
@@ -109,7 +118,23 @@ class TaskViewModel @Inject constructor(
     }
 
     fun setShowCompletedFirst(showCompleted: Boolean) {
+        selectedTab = if (showCompleted) "Completed" else "Incomplete"
         _showCompletedFirst.value = showCompleted
+        filterTasksByCompletionStatus()
+    }
+
+    fun showAllTasks() {
+        selectedTab = "All"
+        _showCompletedFirst.value = null
+        filterTasksByCompletionStatus()
+    }
+
+    private fun filterTasksByCompletionStatus() {
+        _filteredTasks.value = when (selectedTab) {
+            "Completed" -> _tasks.value.filter { it.completed }
+            "Incomplete" -> _tasks.value.filter { !it.completed }
+            else -> _tasks.value
+        }
     }
 
     private fun logAnalyticsEvent(event: String, vararg params: Any) {

@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -65,13 +65,17 @@ import androidx.compose.ui.unit.dp
 import com.deepraj.taskmanager.R
 import com.deepraj.taskmanager.database.entity.Task
 import com.deepraj.taskmanager.ui.theme.TaskManagerTheme
+import com.deepraj.taskmanager.ui.theme.lightGrey
+import com.deepraj.taskmanager.ui.theme.pastelGreen
+import com.deepraj.taskmanager.ui.theme.pastelRed
+import com.deepraj.taskmanager.ui.theme.seaGreen
 import com.deepraj.taskmanager.viewmodels.TaskViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class TaskActivity : ComponentActivity() {
     private val viewModel: TaskViewModel by viewModels()
-    private var isLoading : Boolean by mutableStateOf(false)
+    private var isLoading: Boolean by mutableStateOf(false)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,26 +111,33 @@ class TaskActivity : ComponentActivity() {
                         is TaskViewModel.TaskUiState.Empty -> {
                             //need to icon for empty list for network error and no local data
                         }
+
                         is TaskViewModel.TaskUiState.Loading -> {
                             isLoading = true
                         }
+
                         is TaskViewModel.TaskUiState.Loaded -> {
                             isLoading = false
                             val stateMessage = state.message ?: ""
-                            if (stateMessage.isNotEmpty()){
-                                Toast.makeText(this@TaskActivity, state.message, Toast.LENGTH_SHORT).show()
+                            if (stateMessage.isNotEmpty()) {
+                                Toast.makeText(this@TaskActivity, state.message, Toast.LENGTH_SHORT)
+                                    .show()
                             }
                         }
+
                         is TaskViewModel.TaskUiState.Error -> {
                             isLoading = false
-                            Toast.makeText(this@TaskActivity, state.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@TaskActivity, state.message, Toast.LENGTH_SHORT)
+                                .show()
                         }
+
                         else -> {}
                     }
                 }
             }
         }
     }
+
     @Composable
     fun LoadingViewBox() {
         if (isLoading) {
@@ -135,7 +146,7 @@ class TaskActivity : ComponentActivity() {
                     .fillMaxSize()
                     .wrapContentSize(Alignment.Center)
             ) {
-                CircularProgressIndicator(color = Color(0xFFC8E6C9), modifier = Modifier.size(50.dp))
+                CircularProgressIndicator(color = pastelGreen, modifier = Modifier.size(50.dp))
             }
         }
     }
@@ -152,8 +163,9 @@ fun TaskListScreen(
     val taskList by viewModel.sortedTasks.collectAsState()
     val isReversed by viewModel.isReversed.collectAsState()
     val lazyListState = rememberLazyListState()
+    val allCount by viewModel.allCount.collectAsState()
     val completedCount by viewModel.completedCount.collectAsState()
-    val toBeCompletedCount by viewModel.toBeCompletedCount.collectAsState()
+    val toBeCompletedCount by viewModel.incompleteCount.collectAsState()
 
     val onAddOrUpdateTask: (Task) -> Unit = { task ->
         if (taskList.any { it.id == task.id }) {
@@ -179,16 +191,21 @@ fun TaskListScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .weight(1f)
                         .height(44.dp)
-                        .background(Color(0xFFE0E0E0), shape = RoundedCornerShape(8.dp))
-                        .clickable { viewModel.setShowCompletedFirst(true) },
+                        .background(pastelGreen, shape = RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (viewModel.selectedTab == "All") 2.dp else 0.dp,
+                            color = if (viewModel.selectedTab == "All") Color.DarkGray else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { viewModel.showAllTasks() },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Completed ($completedCount)",
+                        text = "All ($allCount)",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -196,14 +213,41 @@ fun TaskListScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
-                        .background(Color(0xFFC8E6C9), shape = RoundedCornerShape(8.dp))
+                        .background(pastelGreen, shape = RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (viewModel.selectedTab == "Completed") 2.dp else 0.dp,
+                            color = if (viewModel.selectedTab == "Completed") seaGreen else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { viewModel.setShowCompletedFirst(true) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Completed ($completedCount)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .background(lightGrey, shape = RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (viewModel.selectedTab == "Incomplete") 2.dp else 0.dp,
+                            color = if (viewModel.selectedTab == "Incomplete") pastelRed else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
                         .clickable { viewModel.setShowCompletedFirst(false) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "To Be Completed ($toBeCompletedCount)",
+                        text = "Incomplete ($toBeCompletedCount)",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
                 IconButton(
@@ -262,7 +306,7 @@ fun TaskListScreen(
 
 @Composable
 fun TaskItem(task: Task, onClick: () -> Unit) {
-    val backgroundColor = if (task.completed) Color(0xFFE0E0E0) else Color(0xFFC8E6C9)
+    val backgroundColor = if (task.completed) pastelGreen else lightGrey
     val textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None
 
     Column(
@@ -286,7 +330,7 @@ fun TaskItem(task: Task, onClick: () -> Unit) {
 
             Text(
                 text = if (task.completed) "Completed" else "Incomplete",
-                style = MaterialTheme.typography.bodyMedium.copy(color = if (task.completed) Color.Green else Color.Red),
+                style = MaterialTheme.typography.bodyMedium.copy(color = if (task.completed) seaGreen else pastelRed),
             )
         }
         Text(

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 class TaskModule {
 
     @Provides
-    fun provideTaskApi(): TaskApi  =
+    fun provideTaskApi(): TaskApi =
         Retrofit.Builder()
             .client(getOkHttpClient())
             .baseUrl(BASE_URL)
