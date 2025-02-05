@@ -29,7 +29,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -150,8 +149,16 @@ fun TaskListScreen(
     selectedTask: MutableState<Task?>
 ) {
     val taskList by viewModel.tasks.collectAsState()
-    val isReversed = viewModel.isReversed.collectAsState().value
+    val isReversed by viewModel.isReversed.collectAsState()
     val lazyListState = rememberLazyListState()
+    val showCompletedFirst = remember { mutableStateOf(true) }
+
+    val completedTasks = taskList.filter { it.completed }
+    val incompleteTasks = taskList.filter { !it.completed }
+    val sortedTasks = if (showCompletedFirst.value) completedTasks + incompleteTasks else incompleteTasks + completedTasks
+
+    val completedCount = completedTasks.size
+    val toBeCompletedCount = incompleteTasks.size
 
     val onAddOrUpdateTask: (Task) -> Unit = { task ->
         if (taskList.any { it.id == task.id }) {
@@ -160,6 +167,7 @@ fun TaskListScreen(
             viewModel.addTask(task.title)
         }
     }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -171,64 +179,58 @@ fun TaskListScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
                         .background(Color(0xFFE0E0E0), shape = RoundedCornerShape(8.dp))
-                        .align(Alignment.CenterVertically),
+                        .clickable { showCompletedFirst.value = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Completed Tasks",
+                        text = "Completed ($completedCount)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp)) // Spacer between the boxes
+                Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
                         .background(Color(0xFFC8E6C9), shape = RoundedCornerShape(8.dp))
-                        .align(Alignment.CenterVertically),
+                        .clickable { showCompletedFirst.value = false },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "To Be Completed",
+                        text = "To Be Completed ($toBeCompletedCount)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )
                 }
                 IconButton(
-                    onClick = {
-                        viewModel.toggleSortOrder()
-                    }
+                    onClick = { viewModel.toggleSortOrder() }
                 ) {
-                    if (isReversed) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.sort_from_bottom_to_top),
-                            contentDescription = "Sort Tasks Descending"
-                        )
-                    } else {
-                        Icon(
-                            painter = painterResource(id = R.drawable.sort_from_top_to_bottom),
-                            contentDescription = "Sort Tasks Ascending"
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(
+                            id = if (isReversed) R.drawable.sort_from_bottom_to_top
+                            else R.drawable.sort_from_top_to_bottom
+                        ),
+                        contentDescription = "Toggle Sort Order"
+                    )
                 }
             }
 
-            // LazyColumn below the row
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier
-                    .weight(1f) // Take up remaining space
+                    .weight(1f)
                     .simpleVerticalScrollbar(lazyListState)
             ) {
-                items(taskList) { task ->
+                items(sortedTasks) { task ->
                     TaskItem(
                         task = task,
                         onClick = {
@@ -268,8 +270,8 @@ fun TaskItem(task: Task, onClick: () -> Unit) {
     val backgroundColor = if (task.completed) Color(0xFFE0E0E0) else Color(0xFFC8E6C9)
     val textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        horizontalAlignment = Alignment.Start,
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
@@ -277,11 +279,25 @@ fun TaskItem(task: Task, onClick: () -> Unit) {
             .background(backgroundColor, shape = RoundedCornerShape(8.dp))
             .padding(12.dp)
     ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Task ${task.id}",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
+            )
+
+            Text(
+                text = if (task.completed) "Completed" else "Incomplete",
+                style = MaterialTheme.typography.bodyMedium.copy(color = if (task.completed) Color.Green else Color.Red),
+            )
+        }
         Text(
             text = task.title,
             modifier = Modifier
-                .padding(start = 8.dp)
-                .weight(1f),
+                .padding(horizontal = 4.dp),
             style = MaterialTheme.typography.bodyLarge.copy(textDecoration = textDecoration)
         )
     }
