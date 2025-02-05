@@ -38,6 +38,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -148,17 +149,11 @@ fun TaskListScreen(
     showDialog: MutableState<Boolean>,
     selectedTask: MutableState<Task?>
 ) {
-    val taskList by viewModel.tasks.collectAsState()
+    val taskList by viewModel.sortedTasks.collectAsState()
     val isReversed by viewModel.isReversed.collectAsState()
     val lazyListState = rememberLazyListState()
-    val showCompletedFirst = remember { mutableStateOf(true) }
-
-    val completedTasks = taskList.filter { it.completed }
-    val incompleteTasks = taskList.filter { !it.completed }
-    val sortedTasks = if (showCompletedFirst.value) completedTasks + incompleteTasks else incompleteTasks + completedTasks
-
-    val completedCount = completedTasks.size
-    val toBeCompletedCount = incompleteTasks.size
+    val completedCount by viewModel.completedCount.collectAsState()
+    val toBeCompletedCount by viewModel.toBeCompletedCount.collectAsState()
 
     val onAddOrUpdateTask: (Task) -> Unit = { task ->
         if (taskList.any { it.id == task.id }) {
@@ -187,7 +182,7 @@ fun TaskListScreen(
                         .weight(1f)
                         .height(44.dp)
                         .background(Color(0xFFE0E0E0), shape = RoundedCornerShape(8.dp))
-                        .clickable { showCompletedFirst.value = true },
+                        .clickable { viewModel.setShowCompletedFirst(true) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -202,7 +197,7 @@ fun TaskListScreen(
                         .weight(1f)
                         .height(44.dp)
                         .background(Color(0xFFC8E6C9), shape = RoundedCornerShape(8.dp))
-                        .clickable { showCompletedFirst.value = false },
+                        .clickable { viewModel.setShowCompletedFirst(false) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -230,7 +225,7 @@ fun TaskListScreen(
                     .weight(1f)
                     .simpleVerticalScrollbar(lazyListState)
             ) {
-                items(sortedTasks) { task ->
+                items(taskList) { task ->
                     TaskItem(
                         task = task,
                         onClick = {
@@ -354,7 +349,7 @@ fun TaskDialog(
         },
         text = {
             Column {
-                TextField(
+                OutlinedTextField(
                     value = taskTitle,
                     onValueChange = { taskTitle = it },
                     label = { Text("Task Title") }

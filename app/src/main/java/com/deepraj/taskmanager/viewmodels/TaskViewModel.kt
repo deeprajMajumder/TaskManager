@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,16 +25,35 @@ import javax.inject.Inject
 class TaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val taskDatabase: TaskDatabase
-) : ViewModel(){
-    private val TAG = TaskViewModel::class.java.simpleName
+) : ViewModel() {
     private val _uiState = MutableStateFlow<TaskUiState>(TaskUiState.Empty)
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
+
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+
+    // Sorting preferences
     private val _isReversed = MutableStateFlow(false)
     val isReversed: StateFlow<Boolean> = _isReversed.asStateFlow()
-    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
-    val tasks: StateFlow<List<Task>> = combine(_tasks, _isReversed) { tasks, isReversed ->
-        if (isReversed) tasks.reversed() else tasks
+
+    private val _showCompletedFirst = MutableStateFlow<Boolean?>(null)
+    val showCompletedFirst: StateFlow<Boolean?> = _showCompletedFirst.asStateFlow()
+
+    // Task counts
+    val completedCount = _tasks.map { it.count { task -> task.completed } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    val toBeCompletedCount = _tasks.map { it.count { task -> !task.completed } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    val sortedTasks = combine(_tasks, _isReversed, _showCompletedFirst) { tasks, isReversed, showCompletedFirst ->
+        val sorted = when (showCompletedFirst) {
+            true -> tasks.sortedByDescending { it.completed }
+            false -> tasks.sortedBy { it.completed }
+            null -> tasks
+        }
+        if (isReversed) sorted.reversed() else sorted
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     private val firebaseAnalytics = Firebase.analytics
 
     init {
@@ -45,49 +65,32 @@ class TaskViewModel @Inject constructor(
                     taskDatabase.taskDao().insertTasks(tasks)
                     _tasks.value = taskDatabase.taskDao().getAllTasks()
                 }
-                _uiState.value = TaskUiState.Loaded("")
-                val params = Bundle().apply {
-                    putBoolean(Constants.TASK_FETCHED_SUCCESS, true)
-                }
-                firebaseAnalytics.logEvent(Constants.TASK_FETCHED, params)
+                _uiState.value = TaskUiState.Loaded("Tasks Loaded")
+                logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
             } catch (e: Exception) {
                 _uiState.value = TaskUiState.Error("Network Error")
-                val exceptionMessage = e.message
-                Log.e(TAG, "API Error: $exceptionMessage")
-                val params = Bundle().apply {
-                    putString(Constants.TASK_ERROR, exceptionMessage)
-                }
-                firebaseAnalytics.logEvent(Constants.TASK_FETCHED_ERROR, params)
+                logAnalyticsEvent(Constants.TASK_FETCHED_ERROR, e.message ?: "Unknown Error")
             }
         }
     }
 
     fun addTask(title: String) {
         _uiState.value = TaskUiState.Loading
-        val newTask = Task(title = title, completed = false)
         viewModelScope.launch {
+            val newTask = Task(title = title, completed = false)
             taskDatabase.taskDao().insertTask(newTask)
             _tasks.value += newTask
-            _uiState.value = TaskUiState.Loaded("Task added successfully")
-            val params = Bundle().apply {
-                putInt(Constants.TASK_ID, newTask.id)
-                putString(Constants.TASK_TITLE, newTask.title)
-                putBoolean(Constants.TASK_COMPLETED, newTask.completed)
-            }
-            firebaseAnalytics.logEvent(Constants.TASK_ADDED, params)
+            _uiState.value = TaskUiState.Loaded("Task added")
+            logAnalyticsEvent(Constants.TASK_ADDED, newTask.id, newTask.title, newTask.completed)
         }
     }
+
     fun removeTask(task: Task) {
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
             _tasks.value = _tasks.value.filter { it.id != task.id }
-            _uiState.value = TaskUiState.Loaded("Task removed successfully")
-            val params = Bundle().apply {
-                putInt(Constants.TASK_ID, task.id)
-                putString(Constants.TASK_TITLE, task.title)
-                putBoolean(Constants.TASK_COMPLETED, task.completed)
-            }
-            firebaseAnalytics.logEvent(Constants.TASK_REMOVAL, params)
+            _uiState.value = TaskUiState.Loaded("Task removed")
+            logAnalyticsEvent(Constants.TASK_REMOVAL, task.id, task.title, task.completed)
         }
     }
 
@@ -96,20 +99,29 @@ class TaskViewModel @Inject constructor(
         viewModelScope.launch {
             taskDatabase.taskDao().updateTask(task)
             _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
-            _uiState.value = TaskUiState.Loaded("Task updated successfully")
-            val params = Bundle().apply {
-                putInt(Constants.TASK_ID, task.id)
-                putString(Constants.TASK_TITLE, task.title)
-                putBoolean(Constants.TASK_COMPLETED, task.completed)
-            }
-            firebaseAnalytics.logEvent(Constants.TASK_COMPLETION, params)
+            _uiState.value = TaskUiState.Loaded("Task updated")
+            logAnalyticsEvent(Constants.TASK_COMPLETION, task.id, task.title, task.completed)
         }
     }
+
     fun toggleSortOrder() {
         _isReversed.value = !_isReversed.value
     }
 
-    sealed class TaskUiState{
+    fun setShowCompletedFirst(showCompleted: Boolean) {
+        _showCompletedFirst.value = showCompleted
+    }
+
+    private fun logAnalyticsEvent(event: String, vararg params: Any) {
+        val bundle = Bundle().apply {
+            params.forEachIndexed { index, value ->
+                putString("param_$index", value.toString())
+            }
+        }
+        firebaseAnalytics.logEvent(event, bundle)
+    }
+
+    sealed class TaskUiState {
         data object Loading : TaskUiState()
         data object Empty : TaskUiState()
         data class Loaded(val message: String?) : TaskUiState()
