@@ -13,7 +13,7 @@ interface TaskDao {
     suspend fun getAllTasks(): List<Task>
 
     @Insert
-    suspend fun insertTask(task: Task)
+    suspend fun insertTask(task: Task) : Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTasks(tasks: List<Task>)

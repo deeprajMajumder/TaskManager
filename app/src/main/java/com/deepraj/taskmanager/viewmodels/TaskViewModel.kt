@@ -1,6 +1,5 @@
 package com.deepraj.taskmanager.viewmodels
 
-import android.os.Bundle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,6 +9,7 @@ import com.deepraj.taskmanager.database.TaskDatabase
 import com.deepraj.taskmanager.database.entity.Task
 import com.deepraj.taskmanager.repository.TaskRepository
 import com.deepraj.taskmanager.utils.Constants
+import com.deepraj.taskmanager.utils.FirebaseAnalyticsUtil
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.analytics
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -72,10 +72,10 @@ class TaskViewModel @Inject constructor(
                     _filteredTasks.value = _tasks.value // Initially no filtering, show all tasks
                 }
                 _uiState.value = TaskUiState.Loaded("Tasks Loaded")
-                logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
+                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
             } catch (e: Exception) {
                 _uiState.value = TaskUiState.Error("Network Error")
-                logAnalyticsEvent(Constants.TASK_FETCHED_ERROR, e.message ?: "Unknown Error")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_ERROR, e.message ?: "Unknown Error")
             }
         }
     }
@@ -84,11 +84,12 @@ class TaskViewModel @Inject constructor(
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
             val newTask = Task(title = title, completed = false)
-            taskDatabase.taskDao().insertTask(newTask)
-            _tasks.value += newTask
+            val taskId = taskDatabase.taskDao().insertTask(newTask)
+            val insertedTask = newTask.copy(id = taskId.toInt())
+            _tasks.value += insertedTask
             filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task added")
-            logAnalyticsEvent(Constants.TASK_ADDED, newTask.id, newTask.title, newTask.completed)
+            FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_ADDED, insertedTask.id, insertedTask.title, insertedTask.completed)
         }
     }
 
@@ -98,7 +99,7 @@ class TaskViewModel @Inject constructor(
             _tasks.value = _tasks.value.filter { it.id != task.id }
             filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task removed")
-            logAnalyticsEvent(Constants.TASK_REMOVAL, task.id, task.title, task.completed)
+            FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_REMOVAL, task.id, task.title, task.completed)
         }
     }
 
@@ -109,7 +110,7 @@ class TaskViewModel @Inject constructor(
             _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
             filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task updated")
-            logAnalyticsEvent(Constants.TASK_COMPLETION, task.id, task.title, task.completed)
+            FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_COMPLETION, task.id, task.title, task.completed)
         }
     }
 
@@ -135,15 +136,6 @@ class TaskViewModel @Inject constructor(
             "Incomplete" -> _tasks.value.filter { !it.completed }
             else -> _tasks.value
         }
-    }
-
-    private fun logAnalyticsEvent(event: String, vararg params: Any) {
-        val bundle = Bundle().apply {
-            params.forEachIndexed { index, value ->
-                putString("param_$index", value.toString())
-            }
-        }
-        firebaseAnalytics.logEvent(event, bundle)
     }
 
     sealed class TaskUiState {
