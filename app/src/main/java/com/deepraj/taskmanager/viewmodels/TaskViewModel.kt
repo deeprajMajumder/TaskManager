@@ -12,8 +12,11 @@ import com.google.firebase.Firebase
 import com.google.firebase.analytics.analytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,8 +26,12 @@ class TaskViewModel @Inject constructor(
     private val taskDatabase: TaskDatabase
 ) : ViewModel(){
     private val TAG = TaskViewModel::class.java.simpleName
+    private val _isReversed = MutableStateFlow(false)
+    val isReversed: StateFlow<Boolean> = _isReversed.asStateFlow()
     private val _tasks = MutableStateFlow<List<Task>>(emptyList())
-    val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
+    val tasks: StateFlow<List<Task>> = combine(_tasks, _isReversed) { tasks, isReversed ->
+        if (isReversed) tasks.reversed() else tasks
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     private val firebaseAnalytics = Firebase.analytics
 
     init {
@@ -86,5 +93,8 @@ class TaskViewModel @Inject constructor(
             }
             firebaseAnalytics.logEvent(Constants.TASK_COMPLETION, params)
         }
+    }
+    fun toggleSortOrder() {
+        _isReversed.value = !_isReversed.value
     }
 }
