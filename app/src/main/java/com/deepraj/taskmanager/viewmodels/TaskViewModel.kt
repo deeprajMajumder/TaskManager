@@ -26,6 +26,8 @@ class TaskViewModel @Inject constructor(
     private val taskDatabase: TaskDatabase
 ) : ViewModel(){
     private val TAG = TaskViewModel::class.java.simpleName
+    private val _uiState = MutableStateFlow<TaskUiState>(TaskUiState.Empty)
+    val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
     private val _isReversed = MutableStateFlow(false)
     val isReversed: StateFlow<Boolean> = _isReversed.asStateFlow()
     private val _tasks = MutableStateFlow<List<Task>>(emptyList())
@@ -36,17 +38,20 @@ class TaskViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            _uiState.value = TaskUiState.Loading
             try {
                 val apiTasks = taskRepository.getTasks()
                 apiTasks?.let { tasks ->
                     taskDatabase.taskDao().insertTasks(tasks)
                     _tasks.value = taskDatabase.taskDao().getAllTasks()
                 }
+                _uiState.value = TaskUiState.Loaded("")
                 val params = Bundle().apply {
                     putBoolean(Constants.TASK_FETCHED_SUCCESS, true)
                 }
                 firebaseAnalytics.logEvent(Constants.TASK_FETCHED, params)
             } catch (e: Exception) {
+                _uiState.value = TaskUiState.Error("Network Error")
                 val exceptionMessage = e.message
                 Log.e(TAG, "API Error: $exceptionMessage")
                 val params = Bundle().apply {
@@ -58,10 +63,12 @@ class TaskViewModel @Inject constructor(
     }
 
     fun addTask(title: String) {
+        _uiState.value = TaskUiState.Loading
         val newTask = Task(title = title, completed = false)
         viewModelScope.launch {
             taskDatabase.taskDao().insertTask(newTask)
             _tasks.value += newTask
+            _uiState.value = TaskUiState.Loaded("Task added successfully")
             val params = Bundle().apply {
                 putInt(Constants.TASK_ID, newTask.id)
                 putString(Constants.TASK_TITLE, newTask.title)
@@ -71,8 +78,10 @@ class TaskViewModel @Inject constructor(
         }
     }
     fun removeTask(task: Task) {
+        _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
             _tasks.value = _tasks.value.filter { it.id != task.id }
+            _uiState.value = TaskUiState.Loaded("Task removed successfully")
             val params = Bundle().apply {
                 putInt(Constants.TASK_ID, task.id)
                 putString(Constants.TASK_TITLE, task.title)
@@ -83,9 +92,11 @@ class TaskViewModel @Inject constructor(
     }
 
     fun updateTask(task: Task) {
+        _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
             taskDatabase.taskDao().updateTask(task)
             _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
+            _uiState.value = TaskUiState.Loaded("Task updated successfully")
             val params = Bundle().apply {
                 putInt(Constants.TASK_ID, task.id)
                 putString(Constants.TASK_TITLE, task.title)
@@ -96,5 +107,12 @@ class TaskViewModel @Inject constructor(
     }
     fun toggleSortOrder() {
         _isReversed.value = !_isReversed.value
+    }
+
+    sealed class TaskUiState{
+        data object Loading : TaskUiState()
+        data object Empty : TaskUiState()
+        data class Loaded(val message: String?) : TaskUiState()
+        data class Error(val message: String) : TaskUiState()
     }
 }

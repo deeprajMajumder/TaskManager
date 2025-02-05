@@ -1,6 +1,7 @@
 package com.deepraj.taskmanager.views
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -30,6 +33,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -67,6 +71,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class TaskActivity : ComponentActivity() {
     private val viewModel: TaskViewModel by viewModels()
+    private var isLoading : Boolean by mutableStateOf(false)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,13 +96,46 @@ class TaskActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 )
                 { innerPadding ->
+                    LoadingViewBox()
                     TaskListScreen(
                         viewModel = viewModel,
                         innerPadding = innerPadding,
                         showDialog = showDialog,
                         selectedTask = selectedTask
                     )
+                    when (val state = viewModel.uiState.collectAsState().value) {
+                        is TaskViewModel.TaskUiState.Empty -> {
+                            //need to icon for empty list for network error and no local data
+                        }
+                        is TaskViewModel.TaskUiState.Loading -> {
+                            isLoading = true
+                        }
+                        is TaskViewModel.TaskUiState.Loaded -> {
+                            isLoading = false
+                            val stateMessage = state.message ?: ""
+                            if (stateMessage.isNotEmpty()){
+                                Toast.makeText(this@TaskActivity, state.message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        is TaskViewModel.TaskUiState.Error -> {
+                            isLoading = false
+                            Toast.makeText(this@TaskActivity, state.message, Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {}
+                    }
                 }
+            }
+        }
+    }
+    @Composable
+    fun LoadingViewBox() {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize(Alignment.Center)
+            ) {
+                CircularProgressIndicator(color = Color(0xFFC8E6C9), modifier = Modifier.size(50.dp))
             }
         }
     }
