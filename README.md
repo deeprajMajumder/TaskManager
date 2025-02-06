@@ -96,12 +96,6 @@ Below are screenshots of key **Firebase Analytics** events:
 🖼 Events Dashboard
 ![Events Dashboard](appScreenshotsAndRecordings/EventsDashboard.png)
 
-🖼 Network Performance
-![Network Performance](appScreenshotsAndRecordings/NetworkPerformance.png)
-
-🖼 Network Call Success Rate
-![Network Call Success Rate](appScreenshotsAndRecordings/NetworkCallSuccessRate.png)
-
 ---
 
 ## 🔥 Crash Reports & Debugging
@@ -128,7 +122,11 @@ A recording of the app crashing and **Crashlytics logs**:
 
 Below is an analysis of **network request performance**:
 
-🖼 
+🖼 Network Performance
+![Network Performance](appScreenshotsAndRecordings/NetworkPerformance.png)
+
+🖼 Network Call Success Rate
+![Network Call Success Rate](appScreenshotsAndRecordings/NetworkCallSuccessRate.png)
 
 ---
 
