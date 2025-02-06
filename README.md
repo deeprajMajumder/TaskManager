@@ -78,7 +78,23 @@ A modern Android app built with **Kotlin** and **Jetpack Compose**, following cl
 
 Below are screenshots of key **Firebase Analytics** events:
 
-🖼 
+🖼 Firebase Analytics Dashboard
+![Firebase Analytics Dashboard](appScreenshotsAndRecordings/AnalyticsDashboard.png)
+
+🖼 Task Added
+![Task Added](appScreenshotsAndRecordings/TaskAdded.png)
+
+🖼 Task Completed
+![Task Completed](appScreenshotsAndRecordings/TaskCompleted.png)
+
+🖼 Events Dashboard
+![Events Dashboard](appScreenshotsAndRecordings/EventsDashboard.png)
+
+🖼 Network Performance
+![Network Performance](appScreenshotsAndRecordings/NetworkPerformance.png)
+
+🖼 Network Call Success Rate
+![Network Call Success Rate](appScreenshotsAndRecordings/NetworkCallSuccessRate.png)
 
 ---
 
@@ -87,10 +103,19 @@ Below are screenshots of key **Firebase Analytics** events:
 A recording of the app crashing and **Crashlytics logs**:
 
 📹 **Screen recording of the crash**  
+
+   - Forced Crash
+![Forced Crash](appScreenshotsAndRecordings/crash_implementation_20250206_160429.mp4)
+
+   - Forced DataBase Crash
+![Forced DataBase Crash](appScreenshotsAndRecordings/database_crash_20250206_161211.mp4)
+
 📸 **Firebase Console Crash Logs**  
 
-🖼 
-
+   - Forced Crash 
+   🖼 ![Forced Crash](appScreenshotsAndRecordings/ForcedCrash.png)
+   - Forced DataBase Crash
+   🖼 ![Forced DataBase Crash](appScreenshotsAndRecordings/DatabaseCrash.png)
 ---
 
 ## 🌐 Network Performance
