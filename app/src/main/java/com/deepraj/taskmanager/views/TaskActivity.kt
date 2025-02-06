@@ -66,6 +66,7 @@ import com.deepraj.taskmanager.R
 import com.deepraj.taskmanager.database.entity.Task
 import com.deepraj.taskmanager.ui.theme.TaskManagerTheme
 import com.deepraj.taskmanager.ui.theme.lightGrey
+import com.deepraj.taskmanager.ui.theme.pastelBlue
 import com.deepraj.taskmanager.ui.theme.pastelGreen
 import com.deepraj.taskmanager.ui.theme.pastelRed
 import com.deepraj.taskmanager.ui.theme.seaGreen
@@ -193,7 +194,7 @@ fun TaskListScreen(
                 Box(
                     modifier = Modifier
                         .height(44.dp)
-                        .background(pastelGreen, shape = RoundedCornerShape(8.dp))
+                        .background(pastelBlue, shape = RoundedCornerShape(8.dp))
                         .border(
                             width = if (viewModel.selectedTab == "All") 2.dp else 0.dp,
                             color = if (viewModel.selectedTab == "All") Color.DarkGray else Color.Transparent,
