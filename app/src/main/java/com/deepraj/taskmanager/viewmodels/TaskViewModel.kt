@@ -76,7 +76,10 @@ class TaskViewModel @Inject constructor(
                 FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
             } catch (e: Exception) {
                 _uiState.value = TaskUiState.Error("Network Error")
-                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_ERROR, e.message ?: "Unknown Error")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(
+                    Constants.TASK_FETCHED_ERROR,
+                    e.message ?: "Unknown Error"
+                )
             }
         }
     }
@@ -84,31 +87,52 @@ class TaskViewModel @Inject constructor(
     fun addTask(title: String) {
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
-            val newTask = Task(title = title, completed = false)
-            val taskId = taskDatabase.taskDao().insertTask(newTask)
-            val insertedTask = newTask.copy(id = taskId.toInt())
-            _tasks.value += insertedTask
-            filterTasksByCompletionStatus()
-            _uiState.value = TaskUiState.Loaded("Task added")
-            FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_ADDED, insertedTask.id, insertedTask.title, insertedTask.completed)
+            try {
+                val newTask = Task(title = title, completed = false)
+                val taskId = taskDatabase.taskDao().insertTask(newTask)
+                val insertedTask = newTask.copy(id = taskId.toInt())
+                _tasks.value += insertedTask
+                filterTasksByCompletionStatus()
+                _uiState.value = TaskUiState.Loaded("Task added")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(
+                    Constants.TASK_ADDED,
+                    insertedTask.id,
+                    insertedTask.title,
+                    insertedTask.completed
+                )
+            } catch (e: Exception) {
+                _uiState.value = TaskUiState.Error("Task added error")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_ERROR, e.message.toString())
+            }
         }
     }
 
     fun removeTask(task: Task) {
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
-            _tasks.value = _tasks.value.filter { it.id != task.id }
-            filterTasksByCompletionStatus()
-            _uiState.value = TaskUiState.Loaded("Task removed")
-            FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_REMOVAL, task.id, task.title, task.completed)
+            try {
+                _tasks.value = _tasks.value.filter { it.id != task.id }
+                filterTasksByCompletionStatus()
+                _uiState.value = TaskUiState.Loaded("Task removed")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(
+                    Constants.TASK_REMOVAL,
+                    task.id,
+                    task.title,
+                    task.completed
+                )
+            } catch (e: Exception) {
+                _uiState.value = TaskUiState.Error("Task removal error")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_ERROR, e.message.toString())
+            }
         }
     }
 
-    fun crashWhileInsert(){
+    fun crashWhileInsert() {
         viewModelScope.launch {
             val task = Task(id = 1, title = "Crash Test", completed = false)
             taskDatabase.taskDao().insertTask(task)
-            taskDatabase.taskDao().insertTask(task)  // Second insert with the same ID (causes crash)
+            taskDatabase.taskDao()
+                .insertTask(task)  // Second insert with the same ID (causes crash)
             Log.e(TAG, "Crash While Insert")
         }
     }
@@ -130,11 +154,36 @@ class TaskViewModel @Inject constructor(
     fun updateTask(task: Task) {
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch {
-            taskDatabase.taskDao().updateTask(task)
-            _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
-            filterTasksByCompletionStatus()
-            _uiState.value = TaskUiState.Loaded("Task updated")
-            FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_COMPLETION, task.id, task.title, task.completed)
+            try {
+                val existingTask =
+                    taskDatabase.taskDao().getTaskById(task.id) // Fetch the existing task from DB
+
+                if (existingTask == null) {
+                    _uiState.value = TaskUiState.Error("Task not found")
+                    return@launch
+                }
+
+                if (existingTask.title != task.title || existingTask.completed != task.completed) {
+                    taskDatabase.taskDao().updateTask(task)
+                    _tasks.value = _tasks.value.map { if (it.id == task.id) task else it }
+                    filterTasksByCompletionStatus()
+                    _uiState.value = TaskUiState.Loaded("Task updated")
+
+                    val eventType =
+                        if (task.completed) Constants.TASK_COMPLETED else Constants.TASK_EDITED
+                    FirebaseAnalyticsUtil.logAnalyticsEvent(
+                        eventType,
+                        task.id,
+                        task.title,
+                        task.completed
+                    )
+                } else {
+                    _uiState.value = TaskUiState.Loaded("No changes detected")
+                }
+            } catch (e: Exception) {
+                _uiState.value = TaskUiState.Error("Task update error")
+                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_ERROR, e.message.toString())
+            }
         }
     }
 
