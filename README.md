@@ -105,10 +105,10 @@ A recording of the app crashing and **Crashlytics logs**:
 📹 **Screen recording of the crash**  
 
    - Forced Crash
-![Forced Crash](appScreenshotsAndRecordings/crash_implementation_20250206_160429.mp4)
+     🎬   ![Forced Crash](https://drive.google.com/file/d/1lWwM3tK4YOmv0_iW2fdPC7J9QIHIGKHz/view?usp=sharing)
 
-   - Forced DataBase Crash
-![Forced DataBase Crash](appScreenshotsAndRecordings/database_crash_20250206_161211.mp4)
+     - Forced DataBase Crash
+     🎬   ![Forced DataBase Crash](https://drive.google.com/file/d/10L_xctxYUyLpTACq51xwMztcUwCx9e1-/view?usp=sharing)
 
 📸 **Firebase Console Crash Logs**  
 
