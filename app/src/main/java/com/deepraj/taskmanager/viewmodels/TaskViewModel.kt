@@ -75,7 +75,7 @@ class TaskViewModel @Inject constructor(
                     _filteredTasks.value = _tasks.value // Initially no filtering, show all tasks
                 }
                 _uiState.value = TaskUiState.Loaded("")
-                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
+//                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
             } catch (e: Exception) {
                 _uiState.value = TaskUiState.Error("Network Error")
                 FirebaseAnalyticsUtil.logAnalyticsEvent(
@@ -90,18 +90,22 @@ class TaskViewModel @Inject constructor(
         _uiState.value = TaskUiState.Loading
         viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             try {
-                val newTask = Task(title = title, completed = false)
-                val taskId = taskDatabase.taskDao().insertTask(newTask)
-                val insertedTask = newTask.copy(id = taskId.toInt())
-                _tasks.value += insertedTask
-                filterTasksByCompletionStatus()
-                _uiState.value = TaskUiState.Loaded("Task added")
-                FirebaseAnalyticsUtil.logAnalyticsEvent(
-                    Constants.TASK_ADDED,
-                    insertedTask.id,
-                    insertedTask.title,
-                    insertedTask.completed
-                )
+                if (title.isNotEmpty()){
+                    val newTask = Task(title = title, completed = false)
+                    val taskId = taskDatabase.taskDao().insertTask(newTask)
+                    val insertedTask = newTask.copy(id = taskId.toInt())
+                    _tasks.value += insertedTask
+                    filterTasksByCompletionStatus()
+                    _uiState.value = TaskUiState.Loaded("Task added")
+                    FirebaseAnalyticsUtil.logAnalyticsEvent(
+                        Constants.TASK_ADDED,
+                        insertedTask.id,
+                        insertedTask.title,
+                        insertedTask.completed
+                    )
+                } else{
+                    _uiState.value = TaskUiState.Loaded("Please add task details")
+                }
             } catch (e: Exception) {
                 _uiState.value = TaskUiState.Error("Task added error")
                 FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_ERROR, e.message.toString())

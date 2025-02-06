@@ -4,14 +4,20 @@ import android.database.sqlite.SQLiteConstraintException
 import com.deepraj.taskmanager.database.TaskDao
 import com.deepraj.taskmanager.database.TaskDatabase
 import com.deepraj.taskmanager.database.entity.Task
+import com.deepraj.taskmanager.di.modules.CoroutineDispatcherProvider
 import com.deepraj.taskmanager.repository.TaskRepository
+import com.deepraj.taskmanager.utils.FirebaseAnalyticsUtil
 import com.deepraj.taskmanager.viewmodels.TaskViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.verify
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
@@ -34,6 +40,7 @@ class TaskViewModelTest {
     private lateinit var taskDatabase: TaskDatabase
     private lateinit var taskDao: TaskDao
     private lateinit var viewModel: TaskViewModel
+    private lateinit var coroutineDispatcherProvider: CoroutineDispatcherProvider
 
     // Coroutines Test Dispatcher
     private val testDispatcher = StandardTestDispatcher()
@@ -44,13 +51,18 @@ class TaskViewModelTest {
         taskRepository = mockk()
         taskDatabase = mockk()
         taskDao = mockk()
+        coroutineDispatcherProvider = mockk()
 
-        // Mock database behavior
+        val mockFirebaseAnalytics = mockk<FirebaseAnalytics>(relaxed = true)
+        mockkStatic(FirebaseAnalytics::class)
+        every { Firebase.analytics } returns mockFirebaseAnalytics
+
         every { taskDatabase.taskDao() } returns taskDao
 
-        // Initialize ViewModel with Test Coroutine Dispatcher
+        every { coroutineDispatcherProvider.IO() } returns Dispatchers.IO
+
         Dispatchers.setMain(testDispatcher)
-        viewModel = TaskViewModel(taskRepository, taskDatabase)
+        viewModel = TaskViewModel(taskRepository, taskDatabase,coroutineDispatcherProvider)
     }
 
     @After
@@ -68,7 +80,7 @@ class TaskViewModelTest {
             coEvery { taskDao.getAllTasks() } returns mockTasks
 
             // When
-            viewModel = TaskViewModel(taskRepository, taskDatabase)
+            viewModel = TaskViewModel(taskRepository, taskDatabase,coroutineDispatcherProvider)
 
             // Advance the dispatcher
             testDispatcher.scheduler.advanceUntilIdle()
@@ -102,7 +114,7 @@ class TaskViewModelTest {
     fun `removeTask should remove a task and update UI state`() = runTest {
         // Given
         val task = Task(id = 1, title = "Task to Remove", completed = false)
-        viewModel = TaskViewModel(taskRepository, taskDatabase)
+        viewModel = TaskViewModel(taskRepository, taskDatabase,coroutineDispatcherProvider)
         viewModel.addTask(task.title)
 
         // When
@@ -143,7 +155,7 @@ class TaskViewModelTest {
             Task(id = 1, title = "Task 1", completed = false),
             Task(id = 2, title = "Task 2", completed = true)
         )
-        viewModel = TaskViewModel(taskRepository, taskDatabase)
+        viewModel = TaskViewModel(taskRepository, taskDatabase,coroutineDispatcherProvider)
         viewModel.showAllTasks()
 
         // When
@@ -162,7 +174,7 @@ class TaskViewModelTest {
 
         coEvery { taskDao.getAllTasks() } returns listOf(completedTask, incompleteTask)
 
-        viewModel = TaskViewModel(taskRepository, taskDatabase)
+        viewModel = TaskViewModel(taskRepository, taskDatabase,coroutineDispatcherProvider)
 
         // When
         viewModel.setShowCompletedFirst(true)
