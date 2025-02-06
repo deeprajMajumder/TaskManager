@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.deepraj.taskmanager.database.TaskDatabase
 import com.deepraj.taskmanager.database.entity.Task
+import com.deepraj.taskmanager.di.modules.CoroutineDispatcherProvider
 import com.deepraj.taskmanager.repository.TaskRepository
 import com.deepraj.taskmanager.utils.Constants
 import com.deepraj.taskmanager.utils.FirebaseAnalyticsUtil
@@ -27,7 +28,8 @@ import javax.inject.Inject
 @HiltViewModel
 class TaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    private val taskDatabase: TaskDatabase
+    private val taskDatabase: TaskDatabase,
+    private val coroutineDispatcherProvider: CoroutineDispatcherProvider
 ) : ViewModel() {
     private val TAG = TaskViewModel::class.java.simpleName
     private val _uiState = MutableStateFlow<TaskUiState>(TaskUiState.Empty)
@@ -62,7 +64,7 @@ class TaskViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             _uiState.value = TaskUiState.Loading
             try {
                 val apiTasks = taskRepository.getTasks()
@@ -86,7 +88,7 @@ class TaskViewModel @Inject constructor(
 
     fun addTask(title: String) {
         _uiState.value = TaskUiState.Loading
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             try {
                 val newTask = Task(title = title, completed = false)
                 val taskId = taskDatabase.taskDao().insertTask(newTask)
@@ -109,7 +111,7 @@ class TaskViewModel @Inject constructor(
 
     fun removeTask(task: Task) {
         _uiState.value = TaskUiState.Loading
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             try {
                 _tasks.value = _tasks.value.filter { it.id != task.id }
                 filterTasksByCompletionStatus()
@@ -128,7 +130,7 @@ class TaskViewModel @Inject constructor(
     }
 
     fun crashWhileInsert() {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             val task = Task(id = 1, title = "Crash Test", completed = false)
             taskDatabase.taskDao().insertTask(task)
             taskDatabase.taskDao()
@@ -138,7 +140,7 @@ class TaskViewModel @Inject constructor(
     }
 
     fun exceptionWhileInsertWithoutCrash() {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             try {
                 val task = Task(id = 1, title = "Crash Test", completed = false)
                 taskDatabase.taskDao().insertTask(task)
@@ -153,7 +155,7 @@ class TaskViewModel @Inject constructor(
 
     fun updateTask(task: Task) {
         _uiState.value = TaskUiState.Loading
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineDispatcherProvider.IO()) {
             try {
                 val existingTask =
                     taskDatabase.taskDao().getTaskById(task.id) // Fetch the existing task from DB

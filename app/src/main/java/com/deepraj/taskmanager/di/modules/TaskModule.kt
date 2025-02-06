@@ -45,6 +45,9 @@ class TaskModule {
         return TaskDatabase.invoke(context = context)
     }
 
+    @Provides
+    fun provideCoroutineDispatcher() = CoroutineDispatcherProvider()
+
 
     companion object {
         private const val NETWORK_REQUEST_TIMEOUT_SECONDS = 15L

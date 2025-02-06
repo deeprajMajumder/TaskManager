@@ -162,7 +162,7 @@ fun TaskListScreen(
     showDialog: MutableState<Boolean>,
     selectedTask: MutableState<Task?>
 ) {
-    val taskList by viewModel.sortedTasks.collectAsState()
+    val taskList by remember { viewModel.sortedTasks }.collectAsState()
     val isReversed by viewModel.isReversed.collectAsState()
     val lazyListState = rememberLazyListState()
     val allCount by viewModel.allCount.collectAsState()
