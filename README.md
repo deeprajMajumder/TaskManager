@@ -32,12 +32,18 @@ A modern Android app built with **Kotlin** and **Jetpack Compose**, following cl
    git clone https://github.com/deeprajMajumder/TaskManager
    cd TaskManager
    ```
-2. **Open in Android Studio** and sync Gradle.
+2. **Open in Android Studio** and sync Gradle. Required AGP = 8.8.0
 3. **Set up Firebase**:
    - Add your `google-services.json` file to the `app/` directory.
    - Enable Firebase Analytics & Crashlytics in the Firebase console.
-4. **Run the app** on an emulator or physical device.
-5. **Check logs** for Firebase event tracking:
+4. Add **baseUrl="https://jsonplaceholder.typicode.com/"** in gradle.properties
+5. Add **keystore.properties** for running release variant with parameters are below
+   - storePassword=myStorePassword
+   - keyPassword=mykeyPassword
+   - keyAlias=myKeyAlias
+   - storeFile=myStoreFileLocation
+6. **Run the app** on an emulator or physical device.
+7. **Check logs** for Firebase event tracking:
    ```bash
    adb shell setprop log.tag.FirebaseAnalytics DEBUG
    adb logcat -s FirebaseAnalytics
