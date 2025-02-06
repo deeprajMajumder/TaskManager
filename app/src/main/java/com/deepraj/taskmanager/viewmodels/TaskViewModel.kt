@@ -1,5 +1,6 @@
 package com.deepraj.taskmanager.viewmodels
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,8 +11,6 @@ import com.deepraj.taskmanager.database.entity.Task
 import com.deepraj.taskmanager.repository.TaskRepository
 import com.deepraj.taskmanager.utils.Constants
 import com.deepraj.taskmanager.utils.FirebaseAnalyticsUtil
-import com.google.firebase.Firebase
-import com.google.firebase.analytics.analytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,6 +27,7 @@ class TaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val taskDatabase: TaskDatabase
 ) : ViewModel() {
+    private val TAG = TaskViewModel::class.java.simpleName
     private val _uiState = MutableStateFlow<TaskUiState>(TaskUiState.Empty)
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
 
@@ -59,13 +59,12 @@ class TaskViewModel @Inject constructor(
         if (isReversed) tasks.reversed() else tasks
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    private val firebaseAnalytics = Firebase.analytics
-
     init {
         viewModelScope.launch {
             _uiState.value = TaskUiState.Loading
             try {
                 val apiTasks = taskRepository.getTasks()
+                Log.d(TAG, "API Tasks: ${apiTasks?.stream()}")
                 apiTasks?.let { tasks ->
                     taskDatabase.taskDao().insertTasks(tasks)
                     _tasks.value = taskDatabase.taskDao().getAllTasks()

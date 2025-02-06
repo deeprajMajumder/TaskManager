@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Retrofit interfaces
+-keepattributes Signature
+-keep class com.deepraj.taskmanager.datasource.** { *; }
+
+# Keep model classes
+-keepclassmembers class com.deepraj.taskmanager.database.entity.** { *; }
+
+# Keep Gson annotations
+-keepattributes *Annotation*
+-keep class com.google.gson.** { *; }
+-keep class kotlinx.serialization.** { *; }
