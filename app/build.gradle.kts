@@ -104,17 +104,17 @@ dependencies {
     kapt(libs.hilt.android.compiler)
 
     // JUnit for Unit Testing
-    testImplementation ("junit:junit:4.13.2")
+    testImplementation (libs.junit)
 
     // MockK for Mocking
-    testImplementation ("io.mockk:mockk:1.13.5")
-    testImplementation ("io.mockk:mockk-android:1.13.5")
+    testImplementation (libs.mockk)
+    testImplementation (libs.mockk.android)
 
     // Coroutines Testing
-    testImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    testImplementation (libs.kotlinx.coroutines.test)
 
     // AndroidX Arch Core Testing for LiveData & ViewModelScope
-    testImplementation ("androidx.arch.core:core-testing:2.1.0")
+    testImplementation (libs.androidx.core.testing)
 }
 kapt {
     correctErrorTypes = true
