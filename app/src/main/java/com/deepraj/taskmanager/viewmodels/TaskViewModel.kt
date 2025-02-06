@@ -75,7 +75,7 @@ class TaskViewModel @Inject constructor(
                     _filteredTasks.value = _tasks.value // Initially no filtering, show all tasks
                 }
                 _uiState.value = TaskUiState.Loaded("")
-//                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
+                FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_FETCHED_SUCCESS, true)
             } catch (e: Exception) {
                 _uiState.value = TaskUiState.Error("Network Error")
                 FirebaseAnalyticsUtil.logAnalyticsEvent(
