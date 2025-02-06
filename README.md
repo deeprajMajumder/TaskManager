@@ -72,6 +72,12 @@ A modern Android app built with **Kotlin** and **Jetpack Compose**, following cl
 - **Repository Pattern**: Ensures data sources are well-structured and easily testable.
 - **Separation of Concerns**: Each class follows the Single Responsibility Principle.
 
+I chose to implement Clean Architecture and the MVVM design pattern in the Task Manager app to ensure scalability, maintainability, and separation of concerns. Clean Architecture helps organize the app into layers, making it easier to manage and test. By separating business logic from UI, the app becomes more modular and adaptable to future changes.
+
+Using MVVM ensures a clear separation between the View (UI) and the ViewModel (business logic), allowing for better testability and easier updates to the UI without affecting the core logic.
+
+Material Design principles were followed to provide a consistent, intuitive, and visually appealing user experience. It ensures that users have clear feedback for different actions and operations within the app, improving overall usability.
+
 ---
 
 ## 📊 Firebase Analytics Events
