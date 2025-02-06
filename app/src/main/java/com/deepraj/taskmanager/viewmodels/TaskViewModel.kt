@@ -1,5 +1,6 @@
 package com.deepraj.taskmanager.viewmodels
 
+import android.database.sqlite.SQLiteConstraintException
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +12,7 @@ import com.deepraj.taskmanager.database.entity.Task
 import com.deepraj.taskmanager.repository.TaskRepository
 import com.deepraj.taskmanager.utils.Constants
 import com.deepraj.taskmanager.utils.FirebaseAnalyticsUtil
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -99,6 +101,29 @@ class TaskViewModel @Inject constructor(
             filterTasksByCompletionStatus()
             _uiState.value = TaskUiState.Loaded("Task removed")
             FirebaseAnalyticsUtil.logAnalyticsEvent(Constants.TASK_REMOVAL, task.id, task.title, task.completed)
+        }
+    }
+
+    fun crashWhileInsert(){
+        viewModelScope.launch {
+            val task = Task(id = 1, title = "Crash Test", completed = false)
+            taskDatabase.taskDao().insertTask(task)
+            taskDatabase.taskDao().insertTask(task)  // Second insert with the same ID (causes crash)
+            Log.e(TAG, "Crash While Insert")
+        }
+    }
+
+    fun exceptionWhileInsertWithoutCrash() {
+        viewModelScope.launch {
+            try {
+                val task = Task(id = 1, title = "Crash Test", completed = false)
+                taskDatabase.taskDao().insertTask(task)
+                taskDatabase.taskDao()
+                    .insertTask(task)  // Second insert with the same ID (causes crash)
+            } catch (e: SQLiteConstraintException) {
+                Log.e(TAG, "Crash While Insert ", e)
+                FirebaseCrashlytics.getInstance().recordException(e)
+            }
         }
     }
 

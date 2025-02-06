@@ -70,6 +70,7 @@ import com.deepraj.taskmanager.ui.theme.pastelGreen
 import com.deepraj.taskmanager.ui.theme.pastelRed
 import com.deepraj.taskmanager.ui.theme.seaGreen
 import com.deepraj.taskmanager.viewmodels.TaskViewModel
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -285,6 +286,10 @@ fun TaskListScreen(
             onClick = {
                 selectedTask.value = null
                 showDialog.value = true
+//                FirebaseCrashlytics.getInstance().sendUnsentReports()
+//                throw RuntimeException("Forced Crash for Testing")
+//                viewModel.crashWhileInsert()
+//                viewModel.exceptionWhileInsertWithoutCrash()
             },
             modifier = Modifier
                 .padding(16.dp)
